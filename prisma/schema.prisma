@@ -1,0 +1,170 @@
+// This is your Prisma schema file for MongoDB
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+}
+
+enum CategoryType {
+  PROFESSIONAL_CONSULTANT
+  SERVICE_BRANDS
+  PRODUCT_BRANDS
+  RETAIL_BRANDS
+}
+
+model Admin {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  email        String    @unique
+  firstName    String
+  lastName     String
+  passwordHash String
+  role         AdminRole
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  passwordResetTokens PasswordResetToken[]
+  refreshTokens       RefreshToken[]
+  auditLogs           AuditLog[]
+}
+
+model PasswordResetToken {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  tokenHash String    @unique
+  adminId   String    @db.ObjectId
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  admin Admin @relation(fields: [adminId], references: [id])
+}
+
+model RefreshToken {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  tokenHash String    @unique
+  adminId   String    @db.ObjectId
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  admin Admin @relation(fields: [adminId], references: [id])
+}
+
+model Category {
+  id                  String       @id @default(auto()) @map("_id") @db.ObjectId
+  name                String
+  urlSlug             String?
+  type                CategoryType
+  isSubCategoryNeeded Boolean      @default(false)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  subCategories SubCategory[]
+  profiles      Profile[]
+
+  @@index([type])
+  @@index([urlSlug])
+}
+
+model SubCategory {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  name       String
+  urlSlug    String?
+  categoryId String   @db.ObjectId
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  category Category  @relation(fields: [categoryId], references: [id])
+  profiles Profile[]
+
+  @@unique([categoryId, name])
+  @@index([categoryId])
+  @@index([urlSlug])
+}
+
+model Profile {
+  id                 String   @id @default(auto()) @map("_id") @db.ObjectId
+  isDisabled         Boolean  @default(false)
+  image              String?
+  logo               String?
+  categoryId         String   @db.ObjectId
+  subCategoryId      String?  @db.ObjectId
+  name               String
+  yearOfEstablishment String?
+  address            Address
+  contact            Contact
+  workingHours       WorkingHours
+  profileCreatedById String   @db.ObjectId
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  category    Category     @relation(fields: [categoryId], references: [id])
+  subCategory SubCategory? @relation(fields: [subCategoryId], references: [id])
+
+  @@index([categoryId])
+  @@index([subCategoryId])
+  @@index([isDisabled])
+  @@index([name])
+}
+
+type Address {
+  buildingMallPropertyName      String?
+  doorShopNo                    String?
+  floor                         String?
+  streetLaneRoadNameSubLocality String?
+  nearestLandmark               String?
+  secondaryPrimaryLocality      String?
+  cityTown                      String?
+  stateProvince                 String?
+  country                       String?
+  pinCodeZipCode                String?
+}
+
+type Contact {
+  countryCode                           String?
+  officialContactNumber                 String?
+  officialEmailId                       String?
+  officialWebsiteApp                    String?
+  contactPersonName                     String?
+  contactPersonDesignation              String?
+  mostComfortablePreferredLanguages     String[]
+}
+
+type WorkingHours {
+  monday    String?
+  tuesday   String?
+  wednesday String?
+  thursday  String?
+  friday    String?
+  saturday  String?
+  sunday    String?
+}
+
+model AuditLog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  adminId   String?  @db.ObjectId
+  action    String
+  entity    String?
+  entityId  String?
+  metadata  Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  admin Admin? @relation(fields: [adminId], references: [id])
+
+  @@index([adminId])
+  @@index([action])
+  @@index([createdAt])
+}

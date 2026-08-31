@@ -1,0 +1,28 @@
+import {
+  IsBoolean, IsMongoId, IsOptional, IsString, MaxLength, MinLength,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { AddressDto } from './address.dto';
+import { ContactDto } from './contact.dto';
+import { WorkingHoursDto } from './working-hours.dto';
+
+export class UpdateProfileDto {
+  @ApiPropertyOptional() @IsOptional() @IsBoolean() isDisabled?: boolean;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) image?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) logo?: string;
+  @ApiPropertyOptional() @IsOptional() @IsMongoId() categoryId?: string;
+  @ApiPropertyOptional() @IsOptional() @IsMongoId() subCategoryId?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MinLength(1) @MaxLength(200) name?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(10) yearOfEstablishment?: string;
+
+  @ApiPropertyOptional({ type: AddressDto })
+  @IsOptional() @ValidateNested() @Type(() => AddressDto) address?: AddressDto;
+
+  @ApiPropertyOptional({ type: ContactDto })
+  @IsOptional() @ValidateNested() @Type(() => ContactDto) contact?: ContactDto;
+
+  @ApiPropertyOptional({ type: WorkingHoursDto })
+  @IsOptional() @ValidateNested() @Type(() => WorkingHoursDto) workingHours?: WorkingHoursDto;
+}
