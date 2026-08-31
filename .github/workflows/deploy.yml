@@ -5,11 +5,12 @@ on:
     branches: [main]
 
 env:
-  AWS_REGION: ap-south-1                          # change to your region
-  ECR_REPOSITORY: nestjs-backend
-  ECS_CLUSTER: nestjs-cluster
-  ECS_SERVICE: nestjs-service
-  CONTAINER_NAME: nestjs-backend
+  AWS_REGION: ap-south-1
+  ECR_REPOSITORY: prochure-backend
+  ECS_CLUSTER: diligent-dolphin-pwc5fi
+  ECS_SERVICE: prochure-backend-service-3
+  TASK_DEFINITION: frugal-app-hm0lyc   # task definition family name
+  CONTAINER_NAME: Main                  # container name inside the task definition
 
 jobs:
   deploy:
@@ -43,7 +44,7 @@ jobs:
       - name: Download current ECS task definition
         run: |
           aws ecs describe-task-definition \
-            --task-definition ${{ env.ECS_SERVICE }} \
+            --task-definition ${{ env.TASK_DEFINITION }} \
             --query taskDefinition \
             > task-definition.json
 
