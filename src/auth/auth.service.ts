@@ -165,7 +165,7 @@ export class AuthService {
 
     const passwordHash = await argon2.hash(dto.newPassword);
 
-    await this.prisma.$transaction(async (tx) => {
+    await this.prisma.$transaction(async (tx: Parameters<Parameters<typeof this.prisma.$transaction>[0]>[0]) => {
       await tx.passwordResetToken.update({ where: { id: record.id }, data: { usedAt: new Date() } });
       await tx.admin.update({ where: { id: record.adminId }, data: { passwordHash } });
       // Revoke all refresh tokens
