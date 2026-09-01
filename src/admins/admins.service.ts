@@ -139,7 +139,7 @@ export class AdminsService {
       if (count <= 1) throw new BadRequestException('Cannot delete the last Super Admin');
     }
 
-    await this.prisma.$transaction(async (tx) => {
+    await this.prisma.$transaction(async (tx: Parameters<Parameters<typeof this.prisma.$transaction>[0]>[0]) => {
       await tx.admin.update({ where: { id }, data: { deletedAt: new Date(), isActive: false } });
       await tx.refreshToken.updateMany({ where: { adminId: id, revokedAt: null }, data: { revokedAt: new Date() } });
     });
