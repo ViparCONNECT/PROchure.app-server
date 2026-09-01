@@ -23,7 +23,7 @@ export class AuditLogsService {
       adminId: params.adminId,
       entity: params.entity,
       entityId: params.entityId,
-      metadata: params.metadata as Prisma.InputJsonValue,
+      metadata: params.metadata as unknown as Prisma.InputJsonValue,
       ipAddress: params.ipAddress,
       userAgent: params.userAgent,
     };
