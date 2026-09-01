@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { CategoryType } from '@prisma/client';
+import { Category, CategoryType, SubCategory } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -10,7 +10,7 @@ export class PublicService {
     const categories = await this.prisma.category.findMany({ where: { type } });
 
     return Promise.all(
-      categories.map(async (cat) => {
+      categories.map(async (cat: Category) => {
         const profileCount = await this.prisma.profile.count({
           where: { categoryId: cat.id, isDisabled: false },
         });
@@ -34,7 +34,7 @@ export class PublicService {
     const subCategories = await this.prisma.subCategory.findMany({ where: { categoryId } });
 
     return Promise.all(
-      subCategories.map(async (sub) => {
+      subCategories.map(async (sub: SubCategory) => {
         const profileCount = await this.prisma.profile.count({
           where: { subCategoryId: sub.id, isDisabled: false },
         });
