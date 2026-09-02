@@ -93,6 +93,22 @@ export class ProfilesService {
       };
     }
 
+    // Prisma nested relation updates: convert categoryId/subCategoryId to connect/disconnect
+    if ('categoryId' in dto && dto.categoryId) {
+      updateData['category'] = { connect: { id: dto.categoryId } };
+      delete updateData['categoryId'];
+    }
+
+    if ('subCategoryId' in dto) {
+      if (dto.subCategoryId) {
+        updateData['subCategory'] = { connect: { id: dto.subCategoryId } };
+      } else {
+        // explicit null/empty provided -> disconnect relation
+        updateData['subCategory'] = { disconnect: true };
+      }
+      delete updateData['subCategoryId'];
+    }
+
     return this.prisma.profile.update({
       where: { id },
       data: updateData,
