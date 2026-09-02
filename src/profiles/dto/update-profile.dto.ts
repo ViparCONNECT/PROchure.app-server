@@ -25,4 +25,9 @@ export class UpdateProfileDto {
 
   @ApiPropertyOptional({ type: WorkingHoursDto })
   @IsOptional() @ValidateNested() @Type(() => WorkingHoursDto) workingHours?: WorkingHoursDto;
+
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(200) professionalTitle?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) qualifications?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(250) specializations?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) services?: string;
 }

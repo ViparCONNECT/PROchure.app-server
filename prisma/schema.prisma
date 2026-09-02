@@ -103,6 +103,10 @@ model Profile {
   subCategoryId      String?  @db.ObjectId
   name               String
   yearOfEstablishment String?
+  professionalTitle  String?
+  qualifications     String?
+  specializations    String?
+  services           String?
   address            Address
   contact            Contact
   workingHours       WorkingHours
