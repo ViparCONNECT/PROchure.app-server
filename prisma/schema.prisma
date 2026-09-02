@@ -107,6 +107,7 @@ model Profile {
   qualifications     String?
   specializations    String?
   services           String?
+  isWomenEntrepreneur Boolean  @default(false)
   address            Address
   contact            Contact
   workingHours       WorkingHours

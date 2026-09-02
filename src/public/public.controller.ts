@@ -27,7 +27,12 @@ export class PublicController {
   @Get('profiles')
   @ApiOperation({ summary: 'Profile list filtered by category/subcategory/city — returns id + image only' })
   getProfiles(@Query() query: ListPublicProfilesDto) {
-    return this.publicService.getProfiles(query.categoryId, query.subCategoryId, query.city);
+    return this.publicService.getProfiles(
+      query.categoryId,
+      query.subCategoryId,
+      query.city,
+      query.isWomenEntrepreneur,
+    );
   }
 
   @Get('profiles/:id')

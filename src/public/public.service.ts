@@ -43,23 +43,64 @@ export class PublicService {
     );
   }
 
-  async getProfiles(categoryId?: string, subCategoryId?: string, city?: string) {
-    const where: Record<string, unknown> = { isDisabled: false };
-    if (categoryId) where['categoryId'] = categoryId;
-    if (subCategoryId) where['subCategoryId'] = subCategoryId;
-    // Filter on embedded address composite type
-    if (city) {
-      where['address'] = { cityTown: { contains: city, mode: 'insensitive' } };
-    }
+  // async getProfiles(
+  //   categoryId?: string,
+  //   subCategoryId?: string,
+  //   city?: string,
+  //   isWomenEntrepreneur?: boolean,
+  // ) {
+  //   const where: Record<string, unknown> = { isDisabled: false };
+  //   if (categoryId) where['categoryId'] = categoryId;
+  //   if (subCategoryId) where['subCategoryId'] = subCategoryId;
+  //   // if (isWomenEntrepreneur !== undefined) where['isWomenEntrepreneur'] = isWomenEntrepreneur;
+  //   // Filter on embedded address composite type
+  //   if (city) {
+  //     // For MongoDB composite fields Prisma expects the field value directly (no `contains` operator).
+  //     // Use exact match on `address.cityTown`.
+  //     where['address'] = { cityTown: city };
+  //   }
 
-    const profiles = await this.prisma.profile.findMany({
-      where: where as any,
-      select: { id: true, image: true },
-      orderBy: { createdAt: 'desc' },
-    });
+  //   const profiles = await this.prisma.profile.findMany({
+  //     where: where as any,
+  //     select: { id: true, image: true },
+  //     orderBy: { createdAt: 'desc' },
+  //   });
 
-    return profiles;
+  //   console.log(profiles);
+
+  //   return profiles;
+  // }
+
+  async getProfiles(
+  categoryId?: string,
+  subCategoryId?: string,
+  city?: string,
+  isWomenEntrepreneur?: boolean,
+) {
+  const where: any = { isDisabled: false };
+
+  if (categoryId) where.categoryId = categoryId;
+  if (subCategoryId) where.subCategoryId = subCategoryId;
+  
+  // Handled boolean explicitly so 'false' values aren't ignored
+  if (isWomenEntrepreneur !== undefined) {
+    where.isWomenEntrepreneur = isWomenEntrepreneur;
   }
+
+  if (city) {
+    where.address = {
+      is: {
+        cityTown: city,
+      },
+    };
+  }
+
+  return await this.prisma.profile.findMany({
+    where,
+    select: { id: true, image: true },
+    orderBy: { createdAt: 'desc' },
+  });
+}
 
   async getProfileById(id: string) {
     const profile = await this.prisma.profile.findUnique({

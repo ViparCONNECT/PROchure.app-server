@@ -30,4 +30,5 @@ export class UpdateProfileDto {
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) qualifications?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(250) specializations?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) services?: string;
+  @ApiPropertyOptional({ default: false }) @IsOptional() @IsBoolean() isWomenEntrepreneur?: boolean;
 }

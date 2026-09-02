@@ -88,4 +88,9 @@ export class CreateProfileDto {
   @IsString()
   @MaxLength(500)
   services?: string;
+
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
+  @IsBoolean()
+  isWomenEntrepreneur?: boolean;
 }
