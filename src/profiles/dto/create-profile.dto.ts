@@ -47,6 +47,12 @@ export class CreateProfileDto {
   @MaxLength(10)
   yearOfEstablishment?: string;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  yearOfPractice?: string;
+
   @ApiPropertyOptional({ type: AddressDto })
   @IsOptional()
   @ValidateNested()
