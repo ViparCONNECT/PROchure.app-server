@@ -27,6 +27,7 @@ export class ProfilesService {
         subCategoryId: dto.subCategoryId,
         name: dto.name,
         yearOfEstablishment: dto.yearOfEstablishment,
+        yearOfPractice: dto.yearOfPractice,
         isWomenEntrepreneur: dto.isWomenEntrepreneur ?? false,
         address: dto.address ?? {},
         contact: {
