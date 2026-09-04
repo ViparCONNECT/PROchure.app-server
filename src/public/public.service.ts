@@ -7,7 +7,7 @@ export class PublicService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getCategories(type: CategoryType) {
-    const categories = await this.prisma.category.findMany({ where: { type } });
+    const categories = await this.prisma.category.findMany({ where: { type }, orderBy: { name: 'asc' } });
 
     return Promise.all(
       categories.map(async (cat: Category) => {
@@ -28,7 +28,7 @@ export class PublicService {
   }
 
   async getSubCategories(categoryId: string) {
-    const category = await this.prisma.category.findUnique({ where: { id: categoryId } });
+    const category = await this.prisma.category.findUnique({ where: { id: categoryId }, orderBy: { name: 'asc' } });
     if (!category) throw new NotFoundException('Category not found');
 
     const subCategories = await this.prisma.subCategory.findMany({ where: { categoryId } });
