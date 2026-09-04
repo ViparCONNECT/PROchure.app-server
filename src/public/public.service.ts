@@ -28,7 +28,15 @@ export class PublicService {
   }
 
   async getSubCategories(categoryId: string) {
-    const category = await this.prisma.category.findUnique({ where: { id: categoryId }, orderBy: { name: 'asc' } });
+    // const category = await this.prisma.category.findUnique({ where: { id: categoryId }, orderBy: { name: 'asc' } });
+    const category = await this.prisma.category.findUnique({
+      where: { id: categoryId },
+      include: {
+        subCategories: {
+          orderBy: { name: 'asc' }, 
+        },
+      },
+    });
     if (!category) throw new NotFoundException('Category not found');
 
     const subCategories = await this.prisma.subCategory.findMany({ where: { categoryId } });
