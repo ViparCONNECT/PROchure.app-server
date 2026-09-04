@@ -103,6 +103,7 @@ model Profile {
   subCategoryId      String?  @db.ObjectId
   name               String
   yearOfEstablishment String?
+  yearOfPractice     String?
   professionalTitle  String?
   qualifications     String?
   specializations    String?
