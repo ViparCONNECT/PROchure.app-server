@@ -13,6 +13,8 @@ import { RequestIdInterceptor } from './common/interceptors/request-id.intercept
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log', 'debug'],
+    // Raw body is needed to verify Razorpay webhook signatures
+    rawBody: true,
   });
 
   const configService = app.get(ConfigService);
@@ -29,7 +31,7 @@ async function bootstrap() {
   app.enableCors({
     origin: origins,
     credentials: true,
-    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 

@@ -1,18 +1,29 @@
 import {
-  Controller, Get, Post, Patch, Delete, Body, Param, Query,
-  HttpCode, HttpStatus, UseGuards,
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
+import { AdminRole } from '@prisma/client';
 import { ProfilesService } from './profiles.service';
-import { CreateProfileDto } from './dto/create-profile.dto';
-import { UpdateProfileDto } from './dto/update-profile.dto';
-import { ListProfilesDto } from './dto/list-profiles.dto';
+import {
+  AdminCreateProfileDto,
+  AdminUpdateProfileDto,
+  ListProfilesDto,
+} from './dto/admin-profile.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { JwtPayload } from '../common/interfaces/jwt-payload.interface';
-import { AdminRole } from '@prisma/client';
 
 @ApiTags('profiles')
 @ApiBearerAuth()
@@ -29,8 +40,8 @@ export class ProfilesController {
   }
 
   @Post()
-  @ApiOperation({ summary: 'Create profile' })
-  create(@Body() dto: CreateProfileDto, @CurrentUser() user: JwtPayload) {
+  @ApiOperation({ summary: 'Create profile and its owner login (no payment, live immediately)' })
+  create(@Body() dto: AdminCreateProfileDto, @CurrentUser() user: JwtPayload) {
     return this.profilesService.create(dto, user);
   }
 
@@ -40,9 +51,9 @@ export class ProfilesController {
     return this.profilesService.findOne(id);
   }
 
-  @Patch(':id')
-  @ApiOperation({ summary: 'Update profile' })
-  update(@Param('id') id: string, @Body() dto: UpdateProfileDto) {
+  @Put(':id')
+  @ApiOperation({ summary: 'Replace profile content' })
+  update(@Param('id') id: string, @Body() dto: AdminUpdateProfileDto) {
     return this.profilesService.update(id, dto);
   }
 

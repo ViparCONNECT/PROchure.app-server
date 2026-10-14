@@ -12,6 +12,8 @@ import { HealthModule } from './health/health.module';
 import { MailModule } from './mail/mail.module';
 import { PublicModule } from './public/public.module';
 import { UploadModule } from './upload/upload.module';
+import { UserAuthModule } from './user-auth/user-auth.module';
+import { MyProfileModule } from './my-profile/my-profile.module';
 
 @Module({
   imports: [
@@ -36,6 +38,8 @@ import { UploadModule } from './upload/upload.module';
     MailModule,
     PublicModule,
     UploadModule,
+    UserAuthModule,
+    MyProfileModule,
   ],
 })
 export class AppModule {}

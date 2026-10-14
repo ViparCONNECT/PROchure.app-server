@@ -17,9 +17,23 @@ enum AdminRole {
 
 enum CategoryType {
   PROFESSIONAL_CONSULTANT
-  SERVICE_BRANDS
-  PRODUCT_BRANDS
-  RETAIL_BRANDS
+  SERVICE_AND_RETAIL_BRANDS
+}
+
+enum ConsultantKind {
+  INDEPENDENT
+  CONSULTANCY
+}
+
+enum ProfileStatus {
+  PENDING_PAYMENT
+  ACTIVE
+}
+
+enum PaymentStatus {
+  CREATED
+  PAID
+  FAILED
 }
 
 model Admin {
@@ -62,6 +76,58 @@ model RefreshToken {
   admin Admin @relation(fields: [adminId], references: [id])
 }
 
+enum OtpPurpose {
+  REGISTER
+  LOGIN
+}
+
+model User {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  email       String    @unique
+  phone       String    @unique
+  isActive    Boolean   @default(true)
+  lastLoginAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  refreshTokens UserRefreshToken[]
+  profiles      Profile[]
+  payments      Payment[]
+}
+
+model UserRefreshToken {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  tokenHash String    @unique
+  userId    String    @db.ObjectId
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model OtpCode {
+  id         String     @id @default(auto()) @map("_id") @db.ObjectId
+  phone      String
+  purpose    OtpPurpose
+  // MSG91 OTP widget request id (production); codeHash is only used in local dev mode
+  reqId      String?
+  codeHash   String?
+  attempts   Int        @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  // Pending registration details, persisted only after OTP verification
+  name       String?
+  email      String?
+  createdAt  DateTime   @default(now())
+
+  @@index([phone, purpose])
+  @@index([expiresAt])
+}
+
 model Category {
   id                  String       @id @default(auto()) @map("_id") @db.ObjectId
   name                String
@@ -95,34 +161,71 @@ model SubCategory {
 }
 
 model Profile {
-  id                 String   @id @default(auto()) @map("_id") @db.ObjectId
-  isDisabled         Boolean  @default(false)
-  image              String?
-  logo               String?
-  categoryId         String   @db.ObjectId
-  subCategoryId      String?  @db.ObjectId
-  name               String
-  yearOfEstablishment String?
-  yearOfPractice     String?
-  professionalTitle  String?
-  qualifications     String?
-  specializations    String?
-  services           String?
-  isWomenEntrepreneur Boolean  @default(false)
-  address            Address
-  contact            Contact
-  workingHours       WorkingHours
-  profileCreatedById String   @db.ObjectId
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id                  String          @id @default(auto()) @map("_id") @db.ObjectId
+  status              ProfileStatus   @default(ACTIVE)
+  isDisabled          Boolean         @default(false)
+  categoryId          String          @db.ObjectId
+  subCategoryId       String?         @db.ObjectId
+  // Only for PROFESSIONAL_CONSULTANT
+  consultantKind      ConsultantKind?
+  // Name (independent) / Name of entity (consultancy) / Name of service or retail brand
+  name                String
+  // Consultancy only: name of the consultant
+  consultantName      String?
+  // Independent consultant only
+  degrees             String?
+  registrationNumber  String?
+  servicesOffered     String
+  // Practicing since / Established in / Serving since (YYYY)
+  sinceYear           String
+  isWomenEntrepreneur Boolean         @default(false)
+  contactNumbers      String[]
+  emails              String[]
+  address             Address
+  workingHours        WorkingHours
+  languages           String[]
+  // Owner account (one profile per user — enforced in the service)
+  userId              String?         @db.ObjectId
+  // Admin who created the profile (null when self-registered)
+  profileCreatedById  String?         @db.ObjectId
+  publishedAt         DateTime?
+  // Fields from the pre-2026 profile format, kept for reference
+  legacy              Json?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
 
   category    Category     @relation(fields: [categoryId], references: [id])
   subCategory SubCategory? @relation(fields: [subCategoryId], references: [id])
+  user        User?        @relation(fields: [userId], references: [id])
+  payments    Payment[]
 
   @@index([categoryId])
   @@index([subCategoryId])
-  @@index([isDisabled])
+  @@index([status, isDisabled])
+  @@index([userId])
   @@index([name])
+}
+
+model Payment {
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
+  // Kept (as null) if the profile is later deleted, so payment records survive
+  profileId         String?       @db.ObjectId
+  userId            String        @db.ObjectId
+  razorpayOrderId   String        @unique
+  razorpayPaymentId String?
+  // Amount in paise
+  amount            Int
+  currency          String
+  status            PaymentStatus
+  paidAt            DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  profile Profile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  user    User     @relation(fields: [userId], references: [id])
+
+  @@index([profileId])
+  @@index([userId])
 }
 
 type Address {
@@ -138,24 +241,20 @@ type Address {
   pinCodeZipCode                String?
 }
 
-type Contact {
-  countryCode                           String?
-  officialContactNumber                 String?
-  officialEmailId                       String?
-  officialWebsiteApp                    String?
-  contactPersonName                     String?
-  contactPersonDesignation              String?
-  mostComfortablePreferredLanguages     String[]
+// Times are 24h "HH:mm"
+type DaySchedule {
+  closed     Boolean @default(false)
+  open       String?
+  close      String?
+  breakStart String?
+  breakEnd   String?
 }
 
 type WorkingHours {
-  monday    String?
-  tuesday   String?
-  wednesday String?
-  thursday  String?
-  friday    String?
-  saturday  String?
-  sunday    String?
+  // Monday – Friday
+  weekdays DaySchedule
+  saturday DaySchedule
+  sunday   DaySchedule
 }
 
 model AuditLog {

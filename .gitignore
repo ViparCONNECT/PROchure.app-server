@@ -4,3 +4,6 @@ dist/
 *.env.local
 coverage/
 prisma/generated/
+
+# TypeScript incremental build cache
+*.tsbuildinfo

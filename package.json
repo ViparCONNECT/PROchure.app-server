@@ -20,7 +20,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "prisma:generate": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 prisma generate",
     "prisma:studio": "prisma studio",
-    "db:seed": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 ts-node prisma/seed.ts"
+    "db:seed": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 ts-node prisma/seed.ts",
+    "db:migrate:profile-v2": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 ts-node prisma/migrations-data/2026-10-profile-v2.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1123.0",

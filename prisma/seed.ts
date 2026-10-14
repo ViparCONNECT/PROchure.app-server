@@ -28,9 +28,7 @@ async function main() {
   // Seed one default category per type (idempotent by name)
   const categories: Array<{ name: string; type: CategoryType }> = [
     { name: 'Professional Consultant', type: CategoryType.PROFESSIONAL_CONSULTANT },
-    { name: 'Service Brands', type: CategoryType.SERVICE_BRANDS },
-    { name: 'Product Brands', type: CategoryType.PRODUCT_BRANDS },
-    { name: 'Retail Brands', type: CategoryType.RETAIL_BRANDS },
+    { name: 'Service & Retail Brands', type: CategoryType.SERVICE_AND_RETAIL_BRANDS },
   ];
 
   for (const cat of categories) {

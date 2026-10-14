@@ -19,13 +19,17 @@ export class PublicController {
   }
 
   @Get('subcategories')
-  @ApiOperation({ summary: 'All subcategories for a category with profile count — no auth required' })
+  @ApiOperation({
+    summary: 'All subcategories for a category with profile count — no auth required',
+  })
   getSubCategories(@Query() query: ListPublicSubCategoriesDto) {
     return this.publicService.getSubCategories(query.categoryId);
   }
 
   @Get('profiles')
-  @ApiOperation({ summary: 'Profile list filtered by category/subcategory/city — returns id + image only' })
+  @ApiOperation({
+    summary: 'Live profiles filtered by category/subcategory/city — public card data',
+  })
   getProfiles(@Query() query: ListPublicProfilesDto) {
     return this.publicService.getProfiles(
       query.categoryId,

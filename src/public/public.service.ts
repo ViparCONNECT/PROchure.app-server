@@ -1,28 +1,48 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Category, CategoryType, SubCategory } from '@prisma/client';
+import { Category, CategoryType, Prisma, ProfileStatus, SubCategory } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { PUBLIC_PROFILE_SELECT } from '../profiles/profile-data.service';
+
+/** Only paid/admin-published, enabled profiles are public. */
+const LIVE: Prisma.ProfileWhereInput = { status: ProfileStatus.ACTIVE, isDisabled: false };
 
 @Injectable()
 export class PublicService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getCategories(type: CategoryType) {
-    const categories = await this.prisma.category.findMany({ where: { type }, orderBy: { name: 'asc' } });
+    const categories = await this.prisma.category.findMany({
+      where: { type },
+      orderBy: { name: 'asc' },
+    });
 
     return Promise.all(
       categories.map(async (cat: Category) => {
         const profileCount = await this.prisma.profile.count({
-          where: { categoryId: cat.id, isDisabled: false },
+          where: { categoryId: cat.id, ...LIVE },
         });
 
         if (cat.isSubCategoryNeeded) {
           const subCategoryCount = await this.prisma.subCategory.count({
             where: { categoryId: cat.id },
           });
-          return { id: cat.id, name: cat.name, urlSlug: cat.urlSlug, isSubCategoryNeeded: true, subCategoryCount, profileCount };
+          return {
+            id: cat.id,
+            name: cat.name,
+            urlSlug: cat.urlSlug,
+            isSubCategoryNeeded: true,
+            subCategoryCount,
+            profileCount,
+          };
         }
 
-        return { id: cat.id, name: cat.name, urlSlug: cat.urlSlug, isSubCategoryNeeded: false, profileCount };
+        return {
+          id: cat.id,
+          name: cat.name,
+          urlSlug: cat.urlSlug,
+          isSubCategoryNeeded: false,
+          profileCount,
+        };
       }),
     );
   }
@@ -33,7 +53,7 @@ export class PublicService {
       where: { id: categoryId },
       include: {
         subCategories: {
-          orderBy: { name: 'asc' }, 
+          orderBy: { name: 'asc' },
         },
       },
     });
@@ -44,9 +64,15 @@ export class PublicService {
     return Promise.all(
       subCategories.map(async (sub: SubCategory) => {
         const profileCount = await this.prisma.profile.count({
-          where: { subCategoryId: sub.id, isDisabled: false },
+          where: { subCategoryId: sub.id, ...LIVE },
         });
-        return { id: sub.id, name: sub.name, urlSlug: sub.urlSlug, categoryId: sub.categoryId, profileCount };
+        return {
+          id: sub.id,
+          name: sub.name,
+          urlSlug: sub.urlSlug,
+          categoryId: sub.categoryId,
+          profileCount,
+        };
       }),
     );
   }
@@ -80,43 +106,42 @@ export class PublicService {
   // }
 
   async getProfiles(
-  categoryId?: string,
-  subCategoryId?: string,
-  city?: string,
-  isWomenEntrepreneur?: boolean,
-) {
-  const where: any = { isDisabled: false };
+    categoryId?: string,
+    subCategoryId?: string,
+    city?: string,
+    isWomenEntrepreneur?: boolean,
+  ) {
+    const where: Prisma.ProfileWhereInput = { ...LIVE };
 
-  if (categoryId) where.categoryId = categoryId;
-  if (subCategoryId) where.subCategoryId = subCategoryId;
-  
-  // Handled boolean explicitly so 'false' values aren't ignored
-  if (isWomenEntrepreneur !== undefined) {
-    where.isWomenEntrepreneur = isWomenEntrepreneur;
+    if (categoryId) where.categoryId = categoryId;
+    if (subCategoryId) where.subCategoryId = subCategoryId;
+
+    // Handled boolean explicitly so 'false' values aren't ignored
+    if (isWomenEntrepreneur !== undefined) {
+      where.isWomenEntrepreneur = isWomenEntrepreneur;
+    }
+
+    if (city) {
+      where.address = {
+        is: {
+          cityTown: city,
+        },
+      };
+    }
+
+    return await this.prisma.profile.findMany({
+      where,
+      select: PUBLIC_PROFILE_SELECT,
+      orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
+    });
   }
-
-  if (city) {
-    where.address = {
-      is: {
-        cityTown: city,
-      },
-    };
-  }
-
-  return await this.prisma.profile.findMany({
-    where,
-    select: { id: true, image: true },
-    orderBy: { createdAt: 'desc' },
-  });
-}
 
   async getProfileById(id: string) {
-    const profile = await this.prisma.profile.findUnique({
-      where: { id },
-      include: { category: true, subCategory: true },
+    const profile = await this.prisma.profile.findFirst({
+      where: { id, ...LIVE },
+      select: PUBLIC_PROFILE_SELECT,
     });
     if (!profile) throw new NotFoundException('Profile not found');
-    if (profile.isDisabled) throw new NotFoundException('Profile not found');
     return profile;
   }
 }
