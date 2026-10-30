@@ -49,6 +49,7 @@ import * as Joi from 'joi';
         RAZORPAY_KEY_SECRET: Joi.string().allow('').optional(),
         RAZORPAY_WEBHOOK_SECRET: Joi.string().allow('').optional(),
         PROFILE_FEE_INR: Joi.number().integer().min(1).default(1000),
+        PUBLIC_APP_URL: Joi.string().uri().default('https://prochure.app'),
       }),
     }),
   ],

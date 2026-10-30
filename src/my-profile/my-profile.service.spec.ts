@@ -6,6 +6,9 @@ import { MyProfileService } from './my-profile.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProfileDataService } from '../profiles/profile-data.service';
 import { RazorpayService } from '../payments/razorpay.service';
+import { InvoiceService } from './invoice.service';
+
+const invoices = { assignNumber: jest.fn() };
 
 const config: Record<string, unknown> = {
   RAZORPAY_KEY_ID: 'rzp_test_key',
@@ -23,8 +26,10 @@ const prisma = {
     updateMany: jest.fn(),
   },
   payment: { create: jest.fn(), findUnique: jest.fn(), updateMany: jest.fn() },
-  $transaction: jest.fn((ops: unknown[]) => Promise.all(ops)),
+  $transaction: jest.fn(),
 };
+// Interactive transactions run the callback against the same mock client
+const runTx = (cb: (tx: typeof prisma) => unknown) => cb(prisma);
 const user = { id: 'u1', name: 'Asha', email: 'a@b.com', phone: '+919876543210', isActive: true };
 
 describe('MyProfileService', () => {
@@ -34,7 +39,7 @@ describe('MyProfileService', () => {
 
   beforeEach(async () => {
     jest.resetAllMocks();
-    prisma.$transaction.mockImplementation((ops: unknown[]) => Promise.all(ops));
+    prisma.$transaction.mockImplementation(runTx);
     global.fetch = fetchMock as unknown as typeof fetch;
     const mod = await Test.createTestingModule({
       providers: [
@@ -42,6 +47,7 @@ describe('MyProfileService', () => {
         RazorpayService,
         { provide: PrismaService, useValue: prisma },
         { provide: ConfigService, useValue: { get: (k: string) => config[k] } },
+        { provide: InvoiceService, useValue: invoices },
         { provide: ProfileDataService, useValue: { toData: jest.fn(async () => ({ name: 'X' })) } },
       ],
     }).compile();
@@ -95,8 +101,8 @@ describe('MyProfileService', () => {
     });
   });
 
-  it('createPaymentOrder — refuses for an already published profile', async () => {
-    prisma.profile.findFirst.mockResolvedValue({ id: 'p1', status: 'ACTIVE' });
+  it('createPaymentOrder — refuses when the fee is already paid', async () => {
+    prisma.profile.findFirst.mockResolvedValue({ id: 'p1', status: 'ACTIVE', paidAt: new Date() });
     await expect(service.createPaymentOrder('u1')).rejects.toThrow(ConflictException);
   });
 
@@ -112,8 +118,9 @@ describe('MyProfileService', () => {
     expect(prisma.payment.updateMany).not.toHaveBeenCalled();
   });
 
-  it('verifyPayment — valid signature marks paid and publishes the profile', async () => {
+  it('verifyPayment — valid signature marks paid, publishes and re-enables the profile', async () => {
     prisma.payment.findUnique.mockResolvedValue({ id: 'pay1', userId: 'u1', profileId: 'p1' });
+    prisma.payment.updateMany.mockResolvedValue({ count: 1 });
     const signature = createHmac('sha256', 'secret123').update('order_ABC|pay_X').digest('hex');
 
     await service.verifyPayment('u1', {
@@ -128,7 +135,32 @@ describe('MyProfileService', () => {
     });
     expect(prisma.profile.updateMany.mock.calls[0][0]).toMatchObject({
       where: { id: 'p1', status: 'PENDING_PAYMENT' },
-      data: { status: 'ACTIVE' },
+      data: { publishedAt: expect.any(Date) },
+    });
+    expect(prisma.profile.updateMany.mock.calls[1][0]).toMatchObject({
+      where: { id: 'p1' },
+      data: { status: 'ACTIVE', isDisabled: false, paidAt: expect.any(Date) },
+    });
+    expect(invoices.assignNumber).toHaveBeenCalledWith('pay1', expect.any(Date), prisma);
+  });
+
+  it('markPaid — a repeated notification (already PAID) does not touch the profile again', async () => {
+    prisma.payment.findUnique.mockResolvedValue({ id: 'pay1', userId: 'u1', profileId: 'p1' });
+    prisma.payment.updateMany.mockResolvedValue({ count: 0 });
+    await service.markPaid('order_ABC', 'pay_X');
+    expect(prisma.profile.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('createOrderFor — works for an admin-created live profile that is not yet paid', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: 'order_L', amount: 100000, currency: 'INR' }),
+    });
+    const res = await service.createOrderFor({ id: 'p9', paidAt: null }, user);
+    expect(res.orderId).toBe('order_L');
+    expect(prisma.payment.create.mock.calls[0][0].data).toMatchObject({
+      profileId: 'p9',
+      userId: 'u1',
     });
   });
 

@@ -101,12 +101,23 @@ export class ProfileContentDto {
   @MaxLength(100)
   registrationNumber?: string;
 
-  @ApiProperty({ description: 'Services offered / areas of practice / product line' })
+  @ApiProperty({
+    description: 'Core / primary services offered / areas of practice (shown on the card)',
+  })
   @Transform(trim)
   @IsString()
   @MinLength(2)
-  @MaxLength(500)
+  @MaxLength(80, { message: 'Core services must be 80 characters or fewer' })
   servicesOffered!: string;
+
+  @ApiPropertyOptional({
+    description: 'All services offered / areas of practice in detail (profile popup only)',
+  })
+  @IsOptional()
+  @Transform(emptyToUndefined)
+  @IsString()
+  @MaxLength(2000)
+  servicesDetail?: string;
 
   @ApiProperty({
     example: '2012',

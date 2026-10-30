@@ -10,40 +10,49 @@ const LIVE: Prisma.ProfileWhereInput = { status: ProfileStatus.ACTIVE, isDisable
 export class PublicService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /** Category types (groups) for a profile type, in display order. */
+  getCategoryGroups(type: CategoryType) {
+    return this.prisma.categoryGroup.findMany({
+      where: { type },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+      select: { id: true, name: true, sortOrder: true },
+    });
+  }
+
   async getCategories(type: CategoryType) {
     const categories = await this.prisma.category.findMany({
       where: { type },
       orderBy: { name: 'asc' },
+      include: { group: { select: { id: true, name: true, sortOrder: true } } },
     });
 
     return Promise.all(
-      categories.map(async (cat: Category) => {
-        const profileCount = await this.prisma.profile.count({
-          where: { categoryId: cat.id, ...LIVE },
-        });
-
-        if (cat.isSubCategoryNeeded) {
-          const subCategoryCount = await this.prisma.subCategory.count({
-            where: { categoryId: cat.id },
+      categories.map(
+        async (
+          cat: Category & { group: { id: string; name: string; sortOrder: number } | null },
+        ) => {
+          const profileCount = await this.prisma.profile.count({
+            where: { categoryId: cat.id, ...LIVE },
           });
-          return {
+          const base = {
             id: cat.id,
             name: cat.name,
             urlSlug: cat.urlSlug,
-            isSubCategoryNeeded: true,
-            subCategoryCount,
+            groupId: cat.groupId,
+            group: cat.group,
             profileCount,
           };
-        }
 
-        return {
-          id: cat.id,
-          name: cat.name,
-          urlSlug: cat.urlSlug,
-          isSubCategoryNeeded: false,
-          profileCount,
-        };
-      }),
+          if (cat.isSubCategoryNeeded) {
+            const subCategoryCount = await this.prisma.subCategory.count({
+              where: { categoryId: cat.id },
+            });
+            return { ...base, isSubCategoryNeeded: true, subCategoryCount };
+          }
+
+          return { ...base, isSubCategoryNeeded: false };
+        },
+      ),
     );
   }
 

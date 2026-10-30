@@ -1,4 +1,4 @@
-import { IsBoolean, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsBoolean, IsMongoId, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateCategoryDto {
@@ -13,4 +13,9 @@ export class UpdateCategoryDto {
   @IsOptional()
   @IsBoolean()
   isSubCategoryNeeded?: boolean;
+
+  @ApiPropertyOptional({ description: 'Move the category to another category type' })
+  @IsOptional()
+  @IsMongoId()
+  groupId?: string;
 }

@@ -6,7 +6,14 @@ import { DayScheduleDto } from './dto/working-hours.dto';
 
 export const PROFILE_INCLUDE = {
   category: {
-    select: { id: true, name: true, type: true, urlSlug: true, isSubCategoryNeeded: true },
+    select: {
+      id: true,
+      name: true,
+      type: true,
+      urlSlug: true,
+      isSubCategoryNeeded: true,
+      groupId: true,
+    },
   },
   subCategory: { select: { id: true, name: true, urlSlug: true } },
 } satisfies Prisma.ProfileInclude;
@@ -22,6 +29,7 @@ export const PUBLIC_PROFILE_SELECT = {
   degrees: true,
   registrationNumber: true,
   servicesOffered: true,
+  servicesDetail: true,
   sinceYear: true,
   isWomenEntrepreneur: true,
   contactNumbers: true,
@@ -43,6 +51,7 @@ export type ProfileContentData = Pick<
   | 'degrees'
   | 'registrationNumber'
   | 'servicesOffered'
+  | 'servicesDetail'
   | 'sinceYear'
   | 'isWomenEntrepreneur'
   | 'contactNumbers'
@@ -77,6 +86,7 @@ export class ProfileDataService {
       degrees: independent ? (dto.degrees ?? null) : null,
       registrationNumber: independent ? (dto.registrationNumber ?? null) : null,
       servicesOffered: dto.servicesOffered,
+      servicesDetail: dto.servicesDetail ?? null,
       sinceYear: dto.sinceYear,
       isWomenEntrepreneur: dto.isWomenEntrepreneur ?? false,
       contactNumbers: dto.contactNumbers,

@@ -128,19 +128,38 @@ model OtpCode {
   @@index([expiresAt])
 }
 
+// "Category Type" in the UI: groups categories within a profile type
+// (e.g. Licenced Practitioners / Statutory Professionals)
+model CategoryGroup {
+  id        String       @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  type      CategoryType
+  sortOrder Int          @default(0)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  categories Category[]
+
+  @@unique([type, name])
+  @@index([type, sortOrder])
+}
+
 model Category {
-  id                  String       @id @default(auto()) @map("_id") @db.ObjectId
+  id                  String         @id @default(auto()) @map("_id") @db.ObjectId
   name                String
   urlSlug             String?
   type                CategoryType
-  isSubCategoryNeeded Boolean      @default(false)
-  createdAt           DateTime     @default(now())
-  updatedAt           DateTime     @updatedAt
+  groupId             String?        @db.ObjectId
+  isSubCategoryNeeded Boolean        @default(false)
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
 
+  group         CategoryGroup? @relation(fields: [groupId], references: [id])
   subCategories SubCategory[]
   profiles      Profile[]
 
   @@index([type])
+  @@index([groupId])
   @@index([urlSlug])
 }
 
@@ -175,7 +194,10 @@ model Profile {
   // Independent consultant only
   degrees             String?
   registrationNumber  String?
+  // Core / primary services (shown on the card, max 80 chars)
   servicesOffered     String
+  // All services / areas of practice in detail (profile popup only)
+  servicesDetail      String?
   // Practicing since / Established in / Serving since (YYYY)
   sinceYear           String
   isWomenEntrepreneur Boolean         @default(false)
@@ -189,6 +211,10 @@ model Profile {
   // Admin who created the profile (null when self-registered)
   profileCreatedById  String?         @db.ObjectId
   publishedAt         DateTime?
+  // Set when the listing fee has been paid (self-service or via a payment link)
+  paidAt              DateTime?
+  // Admin-generated payment link token (only allows paying this profile's fee); replaced when regenerated
+  paymentLinkToken    String?
   // Fields from the pre-2026 profile format, kept for reference
   legacy              Json?
   createdAt           DateTime        @default(now())
@@ -203,6 +229,7 @@ model Profile {
   @@index([subCategoryId])
   @@index([status, isDisabled])
   @@index([userId])
+  @@index([paymentLinkToken])
   @@index([name])
 }
 
@@ -218,6 +245,9 @@ model Payment {
   currency          String
   status            PaymentStatus
   paidAt            DateTime?
+  // GST invoice, assigned when the payment is confirmed (e.g. VcPro/25-26/0001)
+  invoiceNumber     String?
+  invoiceDate       DateTime?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
@@ -226,6 +256,14 @@ model Payment {
 
   @@index([profileId])
   @@index([userId])
+  @@index([invoiceNumber])
+}
+
+// Running invoice serial per Indian financial year (e.g. "25-26")
+model InvoiceCounter {
+  id            String @id @default(auto()) @map("_id") @db.ObjectId
+  financialYear String @unique
+  seq           Int    @default(0)
 }
 
 type Address {

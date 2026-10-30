@@ -12,6 +12,12 @@ import {
 export class PublicController {
   constructor(private readonly publicService: PublicService) {}
 
+  @Get('category-groups')
+  @ApiOperation({ summary: 'Category types (groups) for a profile type, in display order' })
+  getCategoryGroups(@Query() query: ListPublicCategoriesDto) {
+    return this.publicService.getCategoryGroups(query.type);
+  }
+
   @Get('categories')
   @ApiOperation({ summary: 'All categories by type — no auth required' })
   getCategories(@Query() query: ListPublicCategoriesDto) {

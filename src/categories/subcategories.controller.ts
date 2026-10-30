@@ -1,6 +1,12 @@
 import {
-  Controller, Patch, Delete, Body, Param,
-  HttpCode, HttpStatus, UseGuards,
+  Controller,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { SubCategoriesService } from './subcategories.service';

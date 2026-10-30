@@ -3,10 +3,12 @@ import { CategoriesService } from './categories.service';
 import { SubCategoriesService } from './subcategories.service';
 import { CategoriesController } from './categories.controller';
 import { SubCategoriesController } from './subcategories.controller';
+import { CategoryGroupsService } from './category-groups.service';
+import { CategoryGroupsController } from './category-groups.controller';
 
 @Module({
-  providers: [CategoriesService, SubCategoriesService],
-  controllers: [CategoriesController, SubCategoriesController],
-  exports: [CategoriesService, SubCategoriesService],
+  providers: [CategoriesService, SubCategoriesService, CategoryGroupsService],
+  controllers: [CategoriesController, SubCategoriesController, CategoryGroupsController],
+  exports: [CategoriesService, SubCategoriesService, CategoryGroupsService],
 })
 export class CategoriesModule {}

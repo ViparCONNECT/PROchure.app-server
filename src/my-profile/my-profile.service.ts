@@ -13,6 +13,7 @@ import { ProfileContentDto } from '../profiles/dto/profile-content.dto';
 import { PROFILE_INCLUDE, ProfileDataService } from '../profiles/profile-data.service';
 import { RazorpayService } from '../payments/razorpay.service';
 import { VerifyPaymentDto } from './dto/verify-payment.dto';
+import { InvoiceService } from './invoice.service';
 
 const CURRENCY = 'INR';
 
@@ -28,6 +29,7 @@ const OWN_PROFILE_SELECT = {
   degrees: true,
   registrationNumber: true,
   servicesOffered: true,
+  servicesDetail: true,
   sinceYear: true,
   isWomenEntrepreneur: true,
   contactNumbers: true,
@@ -36,6 +38,7 @@ const OWN_PROFILE_SELECT = {
   workingHours: true,
   languages: true,
   publishedAt: true,
+  paidAt: true,
   createdAt: true,
   updatedAt: true,
   ...PROFILE_INCLUDE,
@@ -50,6 +53,7 @@ export class MyProfileService {
     private readonly config: ConfigService,
     private readonly profileData: ProfileDataService,
     private readonly razorpay: RazorpayService,
+    private readonly invoices: InvoiceService,
   ) {}
 
   private get feePaise(): number {
@@ -90,8 +94,16 @@ export class MyProfileService {
   async createPaymentOrder(userId: string) {
     const user = await this.requireUser(userId);
     const profile = await this.requireProfile(userId);
-    if (profile.status === ProfileStatus.ACTIVE)
-      throw new ConflictException('This profile is already published.');
+    return this.createOrderFor(profile, user);
+  }
+
+  /** Creates a Razorpay order for a profile's listing fee (self-service and payment links). */
+  async createOrderFor(
+    profile: { id: string; paidAt: Date | null },
+    user: { id: string; name: string; email: string; phone: string },
+  ) {
+    if (profile.paidAt)
+      throw new ConflictException('The listing fee for this profile is already paid.');
 
     const order = await this.razorpay.createOrder(
       this.feePaise,
@@ -99,13 +111,13 @@ export class MyProfileService {
       `profile_${profile.id}`,
       {
         profileId: profile.id,
-        userId,
+        userId: user.id,
       },
     );
     await this.prisma.payment.create({
       data: {
         profileId: profile.id,
-        userId,
+        userId: user.id,
         razorpayOrderId: order.id,
         amount: order.amount,
         currency: order.currency,
@@ -124,11 +136,21 @@ export class MyProfileService {
     };
   }
 
+  get fee() {
+    return { amount: this.feePaise, currency: CURRENCY };
+  }
+
   async verifyPayment(userId: string, dto: VerifyPaymentDto) {
     const payment = await this.prisma.payment.findUnique({
       where: { razorpayOrderId: dto.razorpayOrderId },
     });
     if (!payment || payment.userId !== userId) throw new NotFoundException('Payment not found');
+    await this.verifyAndMarkPaid(dto);
+    return this.get(userId);
+  }
+
+  /** Checks the Checkout signature, then marks the order paid. */
+  async verifyAndMarkPaid(dto: VerifyPaymentDto) {
     if (
       !this.razorpay.isValidPaymentSignature(
         dto.razorpayOrderId,
@@ -141,30 +163,37 @@ export class MyProfileService {
       );
     }
     await this.markPaid(dto.razorpayOrderId, dto.razorpayPaymentId);
-    return this.get(userId);
   }
 
-  /** Idempotent: safe to call from both the checkout callback and the webhook. */
+  /**
+   * Idempotent: safe to call from both the checkout callback and the webhook.
+   * Paying publishes a pending profile and re-enables a disabled one.
+   */
   async markPaid(razorpayOrderId: string, razorpayPaymentId: string) {
     const payment = await this.prisma.payment.findUnique({ where: { razorpayOrderId } });
     if (!payment) {
       this.logger.warn(`Paid order ${razorpayOrderId} is unknown`);
       return;
     }
-    await this.prisma.$transaction([
-      this.prisma.payment.updateMany({
+    await this.prisma.$transaction(async (tx) => {
+      const now = new Date();
+      const { count } = await tx.payment.updateMany({
         where: { id: payment.id, status: { not: PaymentStatus.PAID } },
-        data: { status: PaymentStatus.PAID, razorpayPaymentId, paidAt: new Date() },
-      }),
-      ...(payment.profileId
-        ? [
-            this.prisma.profile.updateMany({
-              where: { id: payment.profileId, status: ProfileStatus.PENDING_PAYMENT },
-              data: { status: ProfileStatus.ACTIVE, publishedAt: new Date() },
-            }),
-          ]
-        : []),
-    ]);
+        data: { status: PaymentStatus.PAID, razorpayPaymentId, paidAt: now },
+      });
+      if (count === 0) return; // already processed
+      await this.invoices.assignNumber(payment.id, now, tx);
+      if (!payment.profileId) return;
+
+      await tx.profile.updateMany({
+        where: { id: payment.profileId, status: ProfileStatus.PENDING_PAYMENT },
+        data: { publishedAt: now },
+      });
+      await tx.profile.updateMany({
+        where: { id: payment.profileId },
+        data: { status: ProfileStatus.ACTIVE, isDisabled: false, paidAt: now },
+      });
+    });
   }
 
   async markFailed(razorpayOrderId: string) {

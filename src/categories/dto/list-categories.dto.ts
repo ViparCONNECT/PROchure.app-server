@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional } from 'class-validator';
+import { IsEnum, IsMongoId, IsOptional } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { CategoryType } from '@prisma/client';
 import { PaginationDto } from '../../common/dto/pagination.dto';
@@ -8,4 +8,9 @@ export class ListCategoriesDto extends PaginationDto {
   @IsOptional()
   @IsEnum(CategoryType)
   type?: CategoryType;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsMongoId()
+  groupId?: string;
 }

@@ -1,4 +1,12 @@
-import { IsBoolean, IsEnum, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsEnum,
+  IsMongoId,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { CategoryType } from '@prisma/client';
 
@@ -12,6 +20,12 @@ export class CreateCategoryDto {
   @ApiProperty({ enum: CategoryType })
   @IsEnum(CategoryType)
   type!: CategoryType;
+
+  @ApiProperty({
+    description: 'Category type (group) ObjectId; must belong to the same profile type',
+  })
+  @IsMongoId({ message: 'Please select a category type' })
+  groupId!: string;
 
   @ApiPropertyOptional({ default: false })
   @IsOptional()

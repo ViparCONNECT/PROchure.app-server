@@ -16,9 +16,16 @@ export class SubCategoriesService {
     const existing = await this.prisma.subCategory.findUnique({
       where: { categoryId_name: { categoryId, name: dto.name } },
     });
-    if (existing) throw new ConflictException('Subcategory with this name already exists in the category');
+    if (existing)
+      throw new ConflictException('Subcategory with this name already exists in the category');
 
-    return this.prisma.subCategory.create({ data: { name: dto.name, urlSlug: await this.uniqueSlugForCategory(generateSlug(dto.name), categoryId), categoryId } });
+    return this.prisma.subCategory.create({
+      data: {
+        name: dto.name,
+        urlSlug: await this.uniqueSlugForCategory(generateSlug(dto.name), categoryId),
+        categoryId,
+      },
+    });
   }
 
   async findAll(categoryId: string, query: PaginationDto) {
@@ -40,7 +47,10 @@ export class SubCategoriesService {
   }
 
   async findOne(id: string) {
-    const sub = await this.prisma.subCategory.findUnique({ where: { id }, include: { category: true } });
+    const sub = await this.prisma.subCategory.findUnique({
+      where: { id },
+      include: { category: true },
+    });
     if (!sub) throw new NotFoundException('Subcategory not found');
     return sub;
   }
@@ -51,15 +61,25 @@ export class SubCategoriesService {
       const conflict = await this.prisma.subCategory.findUnique({
         where: { categoryId_name: { categoryId: sub.categoryId, name: dto.name } },
       });
-      if (conflict && conflict.id !== id) throw new ConflictException('Name already taken in this category');
+      if (conflict && conflict.id !== id)
+        throw new ConflictException('Name already taken in this category');
     }
     const updateData: Record<string, unknown> = { ...dto };
-    if (dto.name) updateData['urlSlug'] = await this.uniqueSlugForCategory(generateSlug(dto.name), sub.categoryId, id);
+    if (dto.name)
+      updateData['urlSlug'] = await this.uniqueSlugForCategory(
+        generateSlug(dto.name),
+        sub.categoryId,
+        id,
+      );
     return this.prisma.subCategory.update({ where: { id }, data: updateData });
   }
 
   // Returns a slug unique within the given category, appending -2/-3/... on collision
-  private async uniqueSlugForCategory(base: string, categoryId: string, excludeId?: string): Promise<string> {
+  private async uniqueSlugForCategory(
+    base: string,
+    categoryId: string,
+    excludeId?: string,
+  ): Promise<string> {
     let slug = base;
     let n = 1;
     while (true) {
@@ -75,7 +95,8 @@ export class SubCategoriesService {
   async remove(id: string) {
     await this.findOne(id);
     const profileCount = await this.prisma.profile.count({ where: { subCategoryId: id } });
-    if (profileCount > 0) throw new ConflictException('Cannot delete subcategory with existing profiles');
+    if (profileCount > 0)
+      throw new ConflictException('Cannot delete subcategory with existing profiles');
     await this.prisma.subCategory.delete({ where: { id } });
   }
 }

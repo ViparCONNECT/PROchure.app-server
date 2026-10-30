@@ -1,6 +1,7 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Put, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { MyProfileService } from './my-profile.service';
+import { InvoiceService } from './invoice.service';
 import { ProfileContentDto } from '../profiles/dto/profile-content.dto';
 import { VerifyPaymentDto } from './dto/verify-payment.dto';
 import { UserJwtAuthGuard } from '../user-auth/guards/user-auth.guards';
@@ -12,7 +13,16 @@ import { UserJwtPayload } from '../common/interfaces/user-jwt-payload.interface'
 @UseGuards(UserJwtAuthGuard)
 @Controller({ path: 'me/profile', version: '1' })
 export class MyProfileController {
-  constructor(private readonly myProfile: MyProfileService) {}
+  constructor(
+    private readonly myProfile: MyProfileService,
+    private readonly invoices: InvoiceService,
+  ) {}
+
+  @Get('invoice')
+  @ApiOperation({ summary: 'GST invoice for the paid listing fee (404 until paid)' })
+  invoice(@CurrentUser() user: UserJwtPayload) {
+    return this.invoices.getForUser(user.sub);
+  }
 
   @Get()
   @ApiOperation({ summary: "Logged-in user's profile (null if none) and the listing fee" })

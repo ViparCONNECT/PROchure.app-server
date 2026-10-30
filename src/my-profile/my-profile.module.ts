@@ -4,10 +4,21 @@ import { RazorpayService } from '../payments/razorpay.service';
 import { MyProfileController } from './my-profile.controller';
 import { MyProfileService } from './my-profile.service';
 import { RazorpayWebhookController } from './razorpay-webhook.controller';
+import { PaymentLinksService } from './payment-links.service';
+import { InvoiceService } from './invoice.service';
+import {
+  AdminPaymentLinksController,
+  PublicPaymentLinksController,
+} from './payment-links.controller';
 
 @Module({
   imports: [ProfilesModule],
-  providers: [MyProfileService, RazorpayService],
-  controllers: [MyProfileController, RazorpayWebhookController],
+  providers: [MyProfileService, RazorpayService, PaymentLinksService, InvoiceService],
+  controllers: [
+    MyProfileController,
+    RazorpayWebhookController,
+    AdminPaymentLinksController,
+    PublicPaymentLinksController,
+  ],
 })
 export class MyProfileModule {}
