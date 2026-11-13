@@ -42,7 +42,7 @@ export class InvoiceService {
   async getForUser(userId: string) {
     const profile = await this.prisma.profile.findFirst({
       where: { userId },
-      select: { id: true, name: true },
+      select: { id: true, name: true, gstin: true },
     });
     if (!profile) throw new NotFoundException('You have not created a profile yet');
 
@@ -66,6 +66,7 @@ export class InvoiceService {
       currency: payment.currency,
       seller: INVOICE_SELLER,
       recipient: profile.name,
+      gstin: profile.gstin ?? null,
       profileDisplayChoice: 'Classic-PRO e-visiting card',
       amounts: gstBreakup(payment.amount),
       amountInWords: amountInWords(payment.amount),

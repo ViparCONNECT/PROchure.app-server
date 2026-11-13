@@ -21,6 +21,7 @@ import { AddressDto } from './address.dto';
 import { WorkingHoursDto } from './working-hours.dto';
 
 export const E164_REGEX = /^\+[1-9]\d{7,14}$/;
+export const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 const emptyToUndefined = ({ value }: { value: unknown }) => {
@@ -100,6 +101,21 @@ export class ProfileContentDto {
   @IsString()
   @MaxLength(100)
   registrationNumber?: string;
+
+  @ApiPropertyOptional({
+    description: 'Optional GSTIN for billing / invoice support',
+    example: '27ABCDE1234F1Z5',
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    const normalized = typeof value === 'string' ? value.trim() : value;
+    if (normalized === '' || normalized === null || normalized === undefined) return undefined;
+    return normalized.toUpperCase();
+  })
+  @IsString()
+  @Matches(GSTIN_REGEX, { message: 'GSTIN must be a valid 15-character GSTIN number' })
+  @MaxLength(15, { message: 'GSTIN must be 15 characters or fewer' })
+  gstin?: string;
 
   @ApiProperty({
     description: 'Core / primary services offered / areas of practice (shown on the card)',

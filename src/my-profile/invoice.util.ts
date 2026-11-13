@@ -2,11 +2,10 @@
 export const INVOICE_SELLER = {
   name: 'Vipar ®',
   addressLines: [
-    '# 103, 2nd Floor',
-    '2023/A, Jeevanbheema Nagar',
-    '14th Main, HAL 2nd Stage',
-    'Indiranagar, Bangalore',
-    'Pin code : 560038',
+    '1190/1, 4 th Floor',
+    'HSR Layout, Sector-3, 22 nd Cross Road',
+    'Bangalore – 560102',
+    'Karnataka, India',
   ],
   gstin: '29AERPV7005H3ZU',
 };

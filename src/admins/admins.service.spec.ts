@@ -5,7 +5,7 @@ import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { AdminRole } from '@prisma/client';
 
-const mockPrisma = {
+const mockPrisma: any = {
   admin: {
     findUnique: jest.fn(),
     findFirst: jest.fn(),
@@ -15,7 +15,7 @@ const mockPrisma = {
     update: jest.fn(),
   },
   refreshToken: { updateMany: jest.fn() },
-  $transaction: jest.fn((cb: any) => cb(mockPrisma)),
+  $transaction: jest.fn((cb: any): any => cb(mockPrisma)),
 };
 
 const mockAuditLogs = { log: jest.fn() };

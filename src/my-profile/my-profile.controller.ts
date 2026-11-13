@@ -4,6 +4,7 @@ import { MyProfileService } from './my-profile.service';
 import { InvoiceService } from './invoice.service';
 import { ProfileContentDto } from '../profiles/dto/profile-content.dto';
 import { VerifyPaymentDto } from './dto/verify-payment.dto';
+import { UpdateGstinDto } from './dto/update-gstin.dto';
 import { UserJwtAuthGuard } from '../user-auth/guards/user-auth.guards';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UserJwtPayload } from '../common/interfaces/user-jwt-payload.interface';
@@ -40,6 +41,12 @@ export class MyProfileController {
   @ApiOperation({ summary: 'Update own profile' })
   update(@CurrentUser() user: UserJwtPayload, @Body() dto: ProfileContentDto) {
     return this.myProfile.update(user.sub, dto);
+  }
+
+  @Put('gstin')
+  @ApiOperation({ summary: 'Update only the GSTIN value for the logged-in user profile' })
+  updateGstin(@CurrentUser() user: UserJwtPayload, @Body() dto: UpdateGstinDto) {
+    return this.myProfile.updateGstin(user.sub, dto);
   }
 
   @Post('payment/order')

@@ -60,6 +60,14 @@ describe('ProfileContentDto validation', () => {
     );
   });
 
+  it('accepts a valid GSTIN and rejects invalid values when provided', async () => {
+    const dto = await validate({ ...validConsultant(), gstin: '27abcde1234f1z5' });
+    expect(dto.gstin).toBe('27ABCDE1234F1Z5');
+    expect(await messagesOf({ ...validConsultant(), gstin: 'INVALID' })).toEqual([
+      expect.stringMatching(/GSTIN/),
+    ]);
+  });
+
   it('does not require degrees for consultancy or brands', async () => {
     expect(
       await messagesOf({ ...validConsultant(), consultantKind: 'CONSULTANCY', degrees: undefined }),

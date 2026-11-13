@@ -28,6 +28,7 @@ export const PUBLIC_PROFILE_SELECT = {
   consultantName: true,
   degrees: true,
   registrationNumber: true,
+  gstin: true,
   servicesOffered: true,
   servicesDetail: true,
   sinceYear: true,
@@ -50,6 +51,7 @@ export type ProfileContentData = Pick<
   | 'consultantName'
   | 'degrees'
   | 'registrationNumber'
+  | 'gstin'
   | 'servicesOffered'
   | 'servicesDetail'
   | 'sinceYear'
@@ -85,6 +87,7 @@ export class ProfileDataService {
       consultantName: kind === ConsultantKind.CONSULTANCY ? (dto.consultantName ?? null) : null,
       degrees: independent ? (dto.degrees ?? null) : null,
       registrationNumber: independent ? (dto.registrationNumber ?? null) : null,
+      gstin: dto.gstin ?? null,
       servicesOffered: dto.servicesOffered,
       servicesDetail: dto.servicesDetail ?? null,
       sinceYear: dto.sinceYear,

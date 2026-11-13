@@ -70,6 +70,20 @@ describe('MyProfileService', () => {
     await expect(service.create('u1', {} as any)).rejects.toThrow(ConflictException);
   });
 
+  it('updateGstin — updates only the GSTIN for the user profile', async () => {
+    prisma.profile.findFirst.mockResolvedValue({ id: 'p1', userId: 'u1', gstin: 'OLDGSTIN' });
+    prisma.profile.update.mockResolvedValue({ id: 'p1', gstin: '27ABCDE1234F1Z5' });
+
+    const result = await service.updateGstin('u1', { gstin: '27ABCDE1234F1Z5' });
+
+    expect(prisma.profile.update).toHaveBeenCalledWith({
+      where: { id: 'p1' },
+      data: { gstin: '27ABCDE1234F1Z5' },
+      select: expect.any(Object),
+    });
+    expect(result).toMatchObject({ gstin: '27ABCDE1234F1Z5' });
+  });
+
   it('createPaymentOrder — creates a ₹1000 Razorpay order and records it', async () => {
     prisma.profile.findFirst.mockResolvedValue({ id: 'p1', status: 'PENDING_PAYMENT' });
     fetchMock.mockResolvedValue({

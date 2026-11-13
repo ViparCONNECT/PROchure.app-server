@@ -56,6 +56,11 @@ export class PublicService {
     );
   }
 
+  async getCategoriesWithProfiles(type: CategoryType) {
+    const categories = await this.getCategories(type);
+    return categories.filter((category) => category.profileCount > 0);
+  }
+
   async getSubCategories(categoryId: string) {
     // const category = await this.prisma.category.findUnique({ where: { id: categoryId }, orderBy: { name: 'asc' } });
     const category = await this.prisma.category.findUnique({
@@ -84,6 +89,11 @@ export class PublicService {
         };
       }),
     );
+  }
+
+  async getSubCategoriesWithProfiles(categoryId: string) {
+    const subCategories = await this.getSubCategories(categoryId);
+    return subCategories.filter((subcategory) => subcategory.profileCount > 0);
   }
 
   // async getProfiles(

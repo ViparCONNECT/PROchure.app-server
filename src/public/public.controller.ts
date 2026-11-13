@@ -24,12 +24,24 @@ export class PublicController {
     return this.publicService.getCategories(query.type);
   }
 
+  @Get('categories-with-profiles')
+  @ApiOperation({ summary: 'Categories by type only if at least one live profile exists' })
+  getCategoriesWithProfiles(@Query() query: ListPublicCategoriesDto) {
+    return this.publicService.getCategoriesWithProfiles(query.type);
+  }
+
   @Get('subcategories')
   @ApiOperation({
     summary: 'All subcategories for a category with profile count — no auth required',
   })
   getSubCategories(@Query() query: ListPublicSubCategoriesDto) {
     return this.publicService.getSubCategories(query.categoryId);
+  }
+
+  @Get('subcategories-with-profiles')
+  @ApiOperation({ summary: 'Subcategories for a category only if at least one live profile exists' })
+  getSubCategoriesWithProfiles(@Query() query: ListPublicSubCategoriesDto) {
+    return this.publicService.getSubCategoriesWithProfiles(query.categoryId);
   }
 
   @Get('profiles')

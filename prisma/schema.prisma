@@ -194,6 +194,8 @@ model Profile {
   // Independent consultant only
   degrees             String?
   registrationNumber  String?
+  // Optional GSTIN used for invoices / billing
+  gstin               String?
   // Core / primary services (shown on the card, max 80 chars)
   servicesOffered     String
   // All services / areas of practice in detail (profile popup only)

@@ -28,6 +28,7 @@ const OWN_PROFILE_SELECT = {
   consultantName: true,
   degrees: true,
   registrationNumber: true,
+  gstin: true,
   servicesOffered: true,
   servicesDetail: true,
   sinceYear: true,
@@ -87,6 +88,16 @@ export class MyProfileService {
     return this.prisma.profile.update({
       where: { id: profile.id },
       data,
+      select: OWN_PROFILE_SELECT,
+    });
+  }
+
+  async updateGstin(userId: string, dto: { gstin?: string | null }) {
+    const profile = await this.requireProfile(userId);
+    const gstin = dto.gstin === undefined ? null : dto.gstin === null ? null : dto.gstin.trim().toUpperCase();
+    return this.prisma.profile.update({
+      where: { id: profile.id },
+      data: { gstin },
       select: OWN_PROFILE_SELECT,
     });
   }
