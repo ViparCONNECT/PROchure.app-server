@@ -57,6 +57,12 @@ export class PublicController {
     );
   }
 
+  @Get('profiles/code/:profileCode')
+  @ApiOperation({ summary: 'Full profile details by share code — no auth required' })
+  getProfileByCode(@Param('profileCode') profileCode: string) {
+    return this.publicService.getProfileByCode(profileCode);
+  }
+
   @Get('profiles/:id')
   @ApiOperation({ summary: 'Full profile details — no auth required' })
   getProfile(@Param('id') id: string) {

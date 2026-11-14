@@ -189,6 +189,8 @@ model Profile {
   consultantKind      ConsultantKind?
   // Name (independent) / Name of entity (consultancy) / Name of service or retail brand
   name                String
+  // Share-friendly unique profile code, e.g. PRO-1
+  profileCode         String          @unique
   // Consultancy only: name of the consultant
   consultantName      String?
   // Independent consultant only

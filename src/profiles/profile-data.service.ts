@@ -25,6 +25,7 @@ export const PUBLIC_PROFILE_SELECT = {
   subCategoryId: true,
   consultantKind: true,
   name: true,
+  profileCode: true,
   consultantName: true,
   degrees: true,
   registrationNumber: true,
@@ -40,7 +41,7 @@ export const PUBLIC_PROFILE_SELECT = {
   languages: true,
   publishedAt: true,
   ...PROFILE_INCLUDE,
-} satisfies Prisma.ProfileSelect;
+} as const;
 
 export type ProfileContentData = Pick<
   Prisma.ProfileUncheckedCreateInput,
@@ -67,6 +68,55 @@ export type ProfileContentData = Pick<
 @Injectable()
 export class ProfileDataService {
   constructor(private readonly prisma: PrismaService) {}
+
+  isProfileComplete(profile: Partial<ProfileContentData> & {
+    category?: { type?: CategoryType | null } | null;
+  }): boolean {
+    if (!profile) return false;
+
+    const type = profile.category?.type ?? null;
+    const kind = type === CategoryType.PROFESSIONAL_CONSULTANT ? profile.consultantKind ?? null : null;
+    const independent = kind === ConsultantKind.INDEPENDENT;
+    const name = String(profile.name ?? '').trim();
+    const servicesOffered = String(profile.servicesOffered ?? '').trim();
+    const sinceYear = String(profile.sinceYear ?? '').trim();
+    const addresses = profile.address ?? {};
+    const hours = profile.workingHours ?? {};
+    const numbers = Array.isArray(profile.contactNumbers) ? profile.contactNumbers : [];
+    const emails = Array.isArray(profile.emails) ? profile.emails : [];
+    const languages = Array.isArray(profile.languages) ? profile.languages : [];
+
+    if (!profile.categoryId || !name || name.length < 2) return false;
+    if (type === CategoryType.PROFESSIONAL_CONSULTANT && !kind) return false;
+    if (independent && !String(profile.degrees ?? '').trim()) return false;
+    if (!servicesOffered || servicesOffered.length < 2) return false;
+    if (!/^(19|20)\d{2}$/.test(sinceYear) || Number(sinceYear) > new Date().getFullYear()) return false;
+
+    if (!numbers.length || numbers.some((n) => !/^\+[1-9]\d{7,14}$/.test(String(n).replace(/[\s\-()]/g, '')))) {
+      return false;
+    }
+    if (!emails.length || emails.some((m) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(m).trim()))) {
+      return false;
+    }
+
+    if (!String(addresses.cityTown ?? '').trim() || !String(addresses.stateProvince ?? '').trim() || !String(addresses.country ?? '').trim()) {
+      return false;
+    }
+
+    for (const key of ['weekdays', 'saturday', 'sunday'] as const) {
+      const day = hours[key] as { closed?: boolean; open?: string | null; close?: string | null; breakStart?: string | null; breakEnd?: string | null } | undefined;
+      if (!day || day.closed) continue;
+      if (!day.open || !day.close) return false;
+      if (day.open >= day.close) return false;
+      if (day.breakStart || day.breakEnd) {
+        if (!day.breakStart || !day.breakEnd) return false;
+        if (!(day.open < day.breakStart && day.breakStart < day.breakEnd && day.breakEnd < day.close)) return false;
+      }
+    }
+
+    if (!languages.length || languages.some((lang) => !String(lang).trim())) return false;
+    return true;
+  }
 
   async toData(dto: ProfileContentDto): Promise<ProfileContentData> {
     await this.validateCategory(dto.profileType, dto.categoryId, dto.subCategoryId);

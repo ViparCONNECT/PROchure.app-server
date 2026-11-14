@@ -6,7 +6,14 @@ import { PublicService } from './public.service';
 const prisma = {
   category: { findMany: jest.fn(), findUnique: jest.fn() },
   subCategory: { findMany: jest.fn(), count: jest.fn() },
-  profile: { count: jest.fn() },
+  profile: {
+    count: jest.fn(),
+    findFirst: jest.fn(),
+    findMany: jest.fn(),
+    findUnique: jest.fn(),
+    update: jest.fn(),
+  },
+  $runCommandRaw: jest.fn(),
   categoryGroup: { findMany: jest.fn() },
 };
 
@@ -84,5 +91,54 @@ describe('PublicService', () => {
     const result = await service.getSubCategoriesWithProfiles('cat-1');
 
     expect(result.map((subcategory) => subcategory.id)).toEqual(['sub-1']);
+  });
+
+  it('backfills legacy profiles before listing public profiles', async () => {
+    prisma.$runCommandRaw.mockResolvedValue({
+      cursor: { firstBatch: [{ _id: 'profile-1' }] },
+    });
+    prisma.profile.findUnique.mockResolvedValue(null);
+    prisma.profile.update.mockResolvedValue({ id: 'profile-1', profileCode: 'PRO-1' });
+    prisma.profile.findMany.mockResolvedValue([
+      {
+        id: 'profile-1',
+        profileCode: 'PRO-1',
+        name: 'Sabari V R',
+        categoryId: 'cat-1',
+        status: 'ACTIVE',
+        isDisabled: false,
+      },
+    ]);
+
+    await service.getProfiles('cat-1');
+
+    expect(prisma.profile.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'profile-1' },
+        data: { profileCode: 'PRO-1' },
+      }),
+    );
+  });
+
+  it('getProfileByCode resolves the public profile by its share code', async () => {
+    prisma.profile.findFirst.mockResolvedValue({
+      id: 'profile-1',
+      profileCode: 'PRO-1',
+      name: 'Sabari V R',
+      categoryId: 'cat-1',
+      status: 'ACTIVE',
+      isDisabled: false,
+    });
+
+    const result = await service.getProfileByCode('pro-1');
+
+    expect(prisma.profile.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          profileCode: { equals: 'PRO-1', not: '' },
+        }),
+      }),
+    );
+    expect(result.profileCode).toBe('PRO-1');
   });
 });

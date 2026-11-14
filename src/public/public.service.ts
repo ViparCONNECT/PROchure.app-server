@@ -130,7 +130,12 @@ export class PublicService {
     city?: string,
     isWomenEntrepreneur?: boolean,
   ) {
-    const where: Prisma.ProfileWhereInput = { ...LIVE };
+    await this.ensureLegacyProfileCodes();
+
+    const where: Prisma.ProfileWhereInput = {
+      ...LIVE,
+      profileCode: { not: '' },
+    } as any;
 
     if (categoryId) where.categoryId = categoryId;
     if (subCategoryId) where.subCategoryId = subCategoryId;
@@ -148,19 +153,81 @@ export class PublicService {
       };
     }
 
-    return await this.prisma.profile.findMany({
+    const profiles = await this.prisma.profile.findMany({
       where,
       select: PUBLIC_PROFILE_SELECT,
       orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
     });
+
+    return profiles.filter((profile) => !!profile.profileCode);
   }
 
-  async getProfileById(id: string) {
+  async getProfileById(id: string): Promise<any> {
     const profile = await this.prisma.profile.findFirst({
-      where: { id, ...LIVE },
+      where: { id, ...LIVE, profileCode: { not: '' } } as any,
       select: PUBLIC_PROFILE_SELECT,
     });
-    if (!profile) throw new NotFoundException('Profile not found');
+    if (!profile || !profile.profileCode) {
+      const legacy = await this.prisma.profile.findUnique({ where: { id } as any });
+      if (!legacy || !legacy.profileCode) throw new NotFoundException('Profile not found');
+      const profileCode = await this.generateUniqueProfileCode();
+      await this.prisma.profile.update({ where: { id }, data: { profileCode } as any });
+      return this.getProfileById(id);
+    }
     return profile;
+  }
+
+  async getProfileByCode(profileCode: string) {
+    const normalized = profileCode.trim().toUpperCase();
+    const profile = await this.prisma.profile.findFirst({
+      where: { ...LIVE, profileCode: { equals: normalized, not: '' } } as any,
+      select: PUBLIC_PROFILE_SELECT as any,
+    });
+    if (!profile || !profile.profileCode) throw new NotFoundException('Profile not found');
+    return profile;
+  }
+
+  private async ensureLegacyProfileCodes() {
+    const result = await this.prisma.$runCommandRaw({
+      find: 'Profile',
+      filter: {
+        $or: [
+          { profileCode: null },
+          { profileCode: '' },
+          { profileCode: { $exists: false } },
+        ],
+      },
+      projection: { _id: 1, profileCode: 1 },
+    } as any) as any;
+
+    const legacy = (result?.cursor?.firstBatch ?? []).map((profile: any) => {
+      const id = profile?._id && typeof profile._id === 'object' && profile._id.$oid
+        ? profile._id.$oid
+        : typeof profile?._id === 'string'
+          ? profile._id
+          : String(profile?._id ?? '');
+
+      return { id };
+    });
+
+    for (const profile of legacy) {
+      const profileCode = await this.generateUniqueProfileCode();
+      await this.prisma.profile.update({
+        where: { id: profile.id },
+        data: { profileCode },
+      });
+    }
+  }
+
+  private async generateUniqueProfileCode(): Promise<string> {
+    let counter = 1;
+    while (true) {
+      const code = `PRO-${counter}`;
+      const existing = await this.prisma.profile.findUnique({
+        where: { profileCode: code },
+      } as any);
+      if (!existing) return code;
+      counter += 1;
+    }
   }
 }

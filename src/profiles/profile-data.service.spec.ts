@@ -4,6 +4,7 @@ import { CategoryType, ConsultantKind } from '@prisma/client';
 import { ProfileDataService } from './profile-data.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProfileContentDto } from './dto/profile-content.dto';
+import { AdminCreateProfileDto } from './dto/admin-profile.dto';
 
 const CAT_ID = '64b7f0000000000000000001';
 const SUB_ID = '64b7f0000000000000000002';
@@ -35,9 +36,19 @@ const validConsultant = (): any => ({
 const pipe = new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true });
 const validate = (body: unknown) =>
   pipe.transform(body, { type: 'body', metatype: ProfileContentDto }) as Promise<ProfileContentDto>;
+const validateAdmin = (body: unknown) =>
+  pipe.transform(body, { type: 'body', metatype: AdminCreateProfileDto }) as Promise<AdminCreateProfileDto>;
 const messagesOf = async (body: unknown): Promise<string[]> => {
   try {
     await validate(body);
+    return [];
+  } catch (e: any) {
+    return e.getResponse().message;
+  }
+};
+const adminMessagesOf = async (body: unknown): Promise<string[]> => {
+  try {
+    await validateAdmin(body);
     return [];
   } catch (e: any) {
     return e.getResponse().message;
@@ -112,6 +123,25 @@ describe('ProfileContentDto validation', () => {
         workingHours: { weekdays: closed, saturday: closed, sunday: closed },
       }),
     ).toEqual([]);
+  });
+
+  it('allows admin profile submissions to leave non-name fields blank', async () => {
+    const msgs = await adminMessagesOf({
+      profileType: CategoryType.PROFESSIONAL_CONSULTANT,
+      name: 'Dr. Asha Rao',
+      owner: { email: 'owner@example.com', phone: '+919876543210' },
+      categoryId: CAT_ID,
+      consultantKind: 'CONSULTANCY',
+      degrees: '',
+      servicesOffered: '',
+      sinceYear: '',
+      contactNumbers: [],
+      emails: [],
+      address: { cityTown: '', stateProvince: '', country: '' },
+      workingHours: { weekdays: { closed: false }, saturday: { closed: false }, sunday: { closed: true } },
+      languages: [],
+    });
+    expect(msgs).toEqual([]);
   });
 });
 

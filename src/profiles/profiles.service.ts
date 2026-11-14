@@ -1,5 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, ProfileStatus, User } from '@prisma/client';
+import { CategoryType, ConsultantKind, Prisma, ProfileStatus, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   AdminCreateProfileDto,
@@ -25,18 +25,20 @@ export class ProfilesService {
 
   /** Admin-created profiles are live immediately (no payment) and create/link the owner's login account. */
   async create(dto: AdminCreateProfileDto, actor: JwtPayload) {
-    const data = await this.profileData.toData(dto);
     const owner = await this.resolveOwner(dto.owner, dto.name);
+    const data = this.toAdminProfileData(dto);
+    const profileCode = await this.generateProfileCode();
 
     return this.prisma.profile.create({
       data: {
         ...data,
+        profileCode,
         status: ProfileStatus.ACTIVE,
         isDisabled: dto.isDisabled ?? false,
         userId: owner.id,
         profileCreatedById: actor.sub,
         publishedAt: new Date(),
-      },
+      } as any,
       include: ADMIN_INCLUDE,
     });
   }
@@ -83,7 +85,7 @@ export class ProfilesService {
 
   async update(id: string, dto: AdminUpdateProfileDto) {
     const current = await this.findOne(id);
-    const data = await this.profileData.toData(dto);
+    const data = this.toAdminProfileData(dto);
 
     let userId = current.userId;
     if (dto.owner) {
@@ -109,6 +111,68 @@ export class ProfilesService {
   }
 
   // ─── Private ──────────────────────────────────────────────────────────────
+
+  private async generateProfileCode(): Promise<string> {
+    let counter = 1;
+    while (true) {
+      const code = `PRO-${counter}`;
+      const existing = await this.prisma.profile.findUnique({
+        where: { profileCode: code },
+      } as any);
+      if (!existing) return code;
+      counter += 1;
+    }
+  }
+
+  private toAdminProfileData(
+    dto: AdminCreateProfileDto | AdminUpdateProfileDto,
+  ): Prisma.ProfileUncheckedCreateInput {
+    const kind =
+      dto.profileType === CategoryType.PROFESSIONAL_CONSULTANT ? dto.consultantKind ?? null : null;
+    const independent = kind === ConsultantKind.INDEPENDENT;
+    const normalizeDay = (day?: { closed?: boolean; open?: string | null; close?: string | null; breakStart?: string | null; breakEnd?: string | null } | null) => ({
+      closed: day?.closed ?? false,
+      open: day?.open ?? null,
+      close: day?.close ?? null,
+      breakStart: day?.breakStart ?? null,
+      breakEnd: day?.breakEnd ?? null,
+    });
+
+    return {
+      categoryId: dto.categoryId,
+      subCategoryId: dto.subCategoryId ?? null,
+      consultantKind: kind,
+      name: dto.name,
+      consultantName: kind === ConsultantKind.CONSULTANCY ? dto.consultantName ?? null : null,
+      degrees: independent ? dto.degrees ?? null : null,
+      registrationNumber: independent ? dto.registrationNumber ?? null : null,
+      gstin: dto.gstin ?? null,
+      servicesOffered: dto.servicesOffered ?? '',
+      servicesDetail: dto.servicesDetail ?? null,
+      sinceYear: dto.sinceYear ?? '',
+      isWomenEntrepreneur: dto.isWomenEntrepreneur ?? false,
+      contactNumbers: dto.contactNumbers ?? [],
+      emails: dto.emails ?? [],
+      address: {
+        buildingMallPropertyName: dto.address?.buildingMallPropertyName ?? null,
+        doorShopNo: dto.address?.doorShopNo ?? null,
+        floor: dto.address?.floor ?? null,
+        streetLaneRoadNameSubLocality: dto.address?.streetLaneRoadNameSubLocality ?? null,
+        nearestLandmark: dto.address?.nearestLandmark ?? null,
+        secondaryPrimaryLocality: dto.address?.secondaryPrimaryLocality ?? null,
+        cityTown: dto.address?.cityTown ?? null,
+        stateProvince: dto.address?.stateProvince ?? null,
+        country: dto.address?.country ?? null,
+        pinCodeZipCode: dto.address?.pinCodeZipCode ?? null,
+      },
+      workingHours: {
+        weekdays: normalizeDay(dto.workingHours?.weekdays),
+        saturday: normalizeDay(dto.workingHours?.saturday),
+        sunday: normalizeDay(dto.workingHours?.sunday),
+      },
+      languages: dto.languages ?? [],
+    } as Prisma.ProfileUncheckedCreateInput;
+  }
 
   /** Finds or creates the owner's user account. One profile per user. */
   private async resolveOwner(owner: ProfileOwnerDto, name: string): Promise<User> {

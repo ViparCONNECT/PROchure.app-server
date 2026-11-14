@@ -25,6 +25,7 @@ const OWN_PROFILE_SELECT = {
   subCategoryId: true,
   consultantKind: true,
   name: true,
+  profileCode: true,
   consultantName: true,
   degrees: true,
   registrationNumber: true,
@@ -43,7 +44,7 @@ const OWN_PROFILE_SELECT = {
   createdAt: true,
   updatedAt: true,
   ...PROFILE_INCLUDE,
-} satisfies Prisma.ProfileSelect;
+} as const;
 
 @Injectable()
 export class MyProfileService {
@@ -67,7 +68,12 @@ export class MyProfileService {
       where: { userId },
       select: OWN_PROFILE_SELECT,
     });
-    return { profile, fee: { amount: this.feePaise, currency: CURRENCY } };
+    const profileComplete = profile ? this.profileData.isProfileComplete(profile) : false;
+    return {
+      profile,
+      profileComplete,
+      fee: { amount: this.feePaise, currency: CURRENCY },
+    };
   }
 
   async create(userId: string, dto: ProfileContentDto) {
@@ -76,9 +82,10 @@ export class MyProfileService {
       throw new ConflictException('You already have a profile. You can edit it from "My Profile".');
     }
     const data = await this.profileData.toData(dto);
+    const profileCode = await this.generateProfileCode();
     return this.prisma.profile.create({
-      data: { ...data, userId, status: ProfileStatus.PENDING_PAYMENT },
-      select: OWN_PROFILE_SELECT,
+      data: { ...data, profileCode, userId, status: ProfileStatus.PENDING_PAYMENT } as any,
+      select: OWN_PROFILE_SELECT as any,
     });
   }
 
@@ -106,6 +113,18 @@ export class MyProfileService {
     const user = await this.requireUser(userId);
     const profile = await this.requireProfile(userId);
     return this.createOrderFor(profile, user);
+  }
+
+  private async generateProfileCode(): Promise<string> {
+    let counter = 1;
+    while (true) {
+      const code = `PRO-${counter}`;
+      const existing = await this.prisma.profile.findUnique({
+        where: { profileCode: code },
+      } as any);
+      if (!existing) return code;
+      counter += 1;
+    }
   }
 
   /** Creates a Razorpay order for a profile's listing fee (self-service and payment links). */

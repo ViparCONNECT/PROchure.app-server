@@ -48,7 +48,30 @@ describe('MyProfileService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: ConfigService, useValue: { get: (k: string) => config[k] } },
         { provide: InvoiceService, useValue: invoices },
-        { provide: ProfileDataService, useValue: { toData: jest.fn(async () => ({ name: 'X' })) } },
+        {
+          provide: ProfileDataService,
+          useValue: {
+            toData: jest.fn(async () => ({ name: 'X' })),
+            isProfileComplete: jest.fn((profile) => {
+              const requiredAddress = profile?.address ?? {};
+              return Boolean(
+                profile?.categoryId &&
+                  profile?.name &&
+                  profile?.servicesOffered &&
+                  profile?.sinceYear &&
+                  Array.isArray(profile?.contactNumbers) &&
+                  profile.contactNumbers.length > 0 &&
+                  Array.isArray(profile?.emails) &&
+                  profile.emails.length > 0 &&
+                  requiredAddress.cityTown &&
+                  requiredAddress.stateProvince &&
+                  requiredAddress.country &&
+                  Array.isArray(profile?.languages) &&
+                  profile.languages.length > 0,
+              );
+            }),
+          },
+        },
       ],
     }).compile();
     service = mod.get(MyProfileService);
@@ -68,6 +91,54 @@ describe('MyProfileService', () => {
   it('create — one profile per user', async () => {
     prisma.profile.count.mockResolvedValue(1);
     await expect(service.create('u1', {} as any)).rejects.toThrow(ConflictException);
+  });
+
+  it('get — exposes whether a logged-in profile is complete', async () => {
+    prisma.profile.findFirst.mockResolvedValue({
+      id: 'p1',
+      userId: 'u1',
+      categoryId: 'cat_1',
+      category: { type: 'PROFESSIONAL_CONSULTANT' },
+      consultantKind: 'INDEPENDENT',
+      name: 'Dr. Asha Rao',
+      degrees: 'MBBS',
+      servicesOffered: 'Consulting',
+      sinceYear: '2020',
+      contactNumbers: ['+919876543210'],
+      emails: ['asha@example.com'],
+      address: { cityTown: 'Kochi', stateProvince: 'Kerala', country: 'India' },
+      workingHours: {
+        weekdays: { closed: false, open: '09:00', close: '18:00' },
+        saturday: { closed: true },
+        sunday: { closed: true },
+      },
+      languages: ['English'],
+    });
+
+    await expect(service.get('u1')).resolves.toMatchObject({ profileComplete: true });
+
+    prisma.profile.findFirst.mockResolvedValue({
+      id: 'p2',
+      userId: 'u1',
+      categoryId: 'cat_1',
+      category: { type: 'PROFESSIONAL_CONSULTANT' },
+      consultantKind: 'INDEPENDENT',
+      name: 'Dr. Asha Rao',
+      degrees: 'MBBS',
+      servicesOffered: 'Consulting',
+      sinceYear: '2020',
+      contactNumbers: [],
+      emails: ['asha@example.com'],
+      address: { cityTown: 'Kochi', stateProvince: 'Kerala', country: 'India' },
+      workingHours: {
+        weekdays: { closed: false, open: '09:00', close: '18:00' },
+        saturday: { closed: true },
+        sunday: { closed: true },
+      },
+      languages: ['English'],
+    });
+
+    await expect(service.get('u1')).resolves.toMatchObject({ profileComplete: false });
   });
 
   it('updateGstin — updates only the GSTIN for the user profile', async () => {
