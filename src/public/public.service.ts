@@ -73,7 +73,10 @@ export class PublicService {
     });
     if (!category) throw new NotFoundException('Category not found');
 
-    const subCategories = await this.prisma.subCategory.findMany({ where: { categoryId } });
+    const subCategories = await this.prisma.subCategory.findMany({
+      where: { categoryId },
+      orderBy: { name: 'asc' },
+    });
 
     return Promise.all(
       subCategories.map(async (sub: SubCategory) => {
