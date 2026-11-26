@@ -6,31 +6,22 @@ import {
   HttpStatus,
   Param,
   Post,
-  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AdminRole } from '@prisma/client';
-import { IsBoolean, IsOptional, Matches } from 'class-validator';
-import { Transform } from 'class-transformer';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { PaymentLinksService } from './payment-links.service';
 import { VerifyPaymentDto } from './dto/verify-payment.dto';
+import { Matches } from 'class-validator';
 
-const TOKEN_PATTERN = /^[A-Za-z0-9_-]{20,64}$/;
+const TOKEN_PATTERN = /^[A-Za-z0-9_-]{5,128}$/;
 
 class TokenParam {
   @Matches(TOKEN_PATTERN, { message: 'Invalid payment link' })
   token!: string;
-}
-
-class PaymentLinkQuery {
-  @IsOptional()
-  @Transform(({ value }) => value === 'true' || value === true)
-  @IsBoolean()
-  regenerate?: boolean;
 }
 
 @ApiTags('profiles')
@@ -43,9 +34,9 @@ export class AdminPaymentLinksController {
 
   @Post(':id/payment-link')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Get (or regenerate) the shareable payment link for a profile' })
-  getLink(@Param('id') id: string, @Query() query: PaymentLinkQuery) {
-    return this.links.getOrCreateLink(id, query.regenerate ?? false);
+  @ApiOperation({ summary: 'Get the shareable payment link for a profile' })
+  getLink(@Param('id') id: string) {
+    return this.links.getOrCreateLink(id, false);
   }
 }
 

@@ -30,22 +30,24 @@ describe('PaymentLinksService', () => {
     );
   });
 
-  it('getOrCreateLink — creates a token once and reuses it afterwards', async () => {
+  it('getOrCreateLink — creates one stable profile-code/name URL and reuses it', async () => {
     prisma.profile.findUnique.mockResolvedValue({
       id: 'p1',
+      name: 'Dr Mohanchandra Suvarna',
+      profileCode: 'PRO-33',
       userId: 'u1',
       paymentLinkToken: null,
       paidAt: null,
     });
     const first = await service.getOrCreateLink('p1');
-    const token = prisma.profile.update.mock.calls[0][0].data.paymentLinkToken as string;
-    expect(token).toMatch(/^[A-Za-z0-9_-]{32}$/);
-    expect(first.url).toBe(`https://prochure.app/pay/${token}`);
+    expect(first.url).toBe('https://prochure.app/pay/PRO-33-dr-mohanchandra-suvarna');
 
     prisma.profile.findUnique.mockResolvedValue({
       id: 'p1',
+      name: 'Dr Mohanchandra Suvarna',
+      profileCode: 'PRO-33',
       userId: 'u1',
-      paymentLinkToken: token,
+      paymentLinkToken: 'PRO-33-dr-mohanchandra-suvarna',
       paidAt: null,
     });
     prisma.profile.update.mockClear();
@@ -53,15 +55,17 @@ describe('PaymentLinksService', () => {
     expect(prisma.profile.update).not.toHaveBeenCalled();
   });
 
-  it('getOrCreateLink — regenerate replaces the token (old link stops working)', async () => {
+  it('getOrCreateLink — ignore regenerate requests because links are stable', async () => {
     prisma.profile.findUnique.mockResolvedValue({
       id: 'p1',
+      name: 'Dr Mohanchandra Suvarna',
+      profileCode: 'PRO-33',
       userId: 'u1',
-      paymentLinkToken: 'old-token-xxxxxxxxxxxx',
+      paymentLinkToken: 'PRO-33-dr-mohanchandra-suvarna',
       paidAt: null,
     });
     const res = await service.getOrCreateLink('p1', true);
-    expect(res.url).not.toContain('old-token');
+    expect(res.url).toBe('https://prochure.app/pay/PRO-33-dr-mohanchandra-suvarna');
   });
 
   it('getOrCreateLink — requires an owner login', async () => {

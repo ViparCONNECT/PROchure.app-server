@@ -217,7 +217,7 @@ model Profile {
   publishedAt         DateTime?
   // Set when the listing fee has been paid (self-service or via a payment link)
   paidAt              DateTime?
-  // Admin-generated payment link token (only allows paying this profile's fee); replaced when regenerated
+  // Stable public payment-link slug (profile code + name) for the listing fee
   paymentLinkToken    String?
   // Fields from the pre-2026 profile format, kept for reference
   legacy              Json?
